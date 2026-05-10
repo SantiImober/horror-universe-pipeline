@@ -26,3 +26,14 @@ CREATE TABLE IF NOT EXISTS movie_genres (
     genre_id    INTEGER REFERENCES dim_genres(id),
     PRIMARY KEY (movie_id, genre_id)
 );
+
+CREATE TABLE IF NOT EXISTS dim_books (
+    id                  VARCHAR(50) PRIMARY KEY,
+    title               VARCHAR(500),
+    author              VARCHAR(300),
+    first_publish_year  INTEGER,
+    number_of_pages     INTEGER,
+    ratings_average     NUMERIC(5,3),
+    ratings_count       INTEGER,
+    extracted_at        TIMESTAMP DEFAULT NOW()
+);
