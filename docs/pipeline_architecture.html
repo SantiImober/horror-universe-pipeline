@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horror Universe Pipeline — Architecture</title>
+<style>
+  @keyframes flow{0%{stroke-dashoffset:40}100%{stroke-dashoffset:0}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d0d0d;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:32px 24px;min-height:100vh}
+  .wrap{max-width:780px;margin:0 auto}
+  .skull{text-align:center;font-size:36px;margin-bottom:6px;opacity:.6}
+  .title-row{text-align:center;margin-bottom:28px}
+  .title-row h1{font-size:22px;font-weight:500;color:#f0f0f0;margin-bottom:6px}
+  .title-row p{font-size:13px;color:#666}
+  .pipeline{display:flex;flex-direction:column;gap:0}
+  .phase-row{display:grid;grid-template-columns:90px 1fr;gap:14px;align-items:start;margin-bottom:0}
+  .phase-tag{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#555;padding-top:14px;text-align:right}
+  .cards{display:flex;gap:8px;flex-wrap:wrap}
+  .card{border-radius:10px;padding:11px 15px;cursor:pointer;transition:transform .15s,opacity .15s;border:1.5px solid transparent;min-width:130px;flex:1}
+  .card:hover{transform:translateY(-2px);opacity:.85}
+  .card .name{font-size:13px;font-weight:500;margin-bottom:3px}
+  .card .detail{font-size:11px;opacity:.7}
+  .c-api{background:#1a0a2e;border-color:#7F77DD;color:#CECBF6}
+  .c-api .detail{color:#AFA9EC}
+  .c-ext{background:#0a1f0f;border-color:#1D9E75;color:#9FE1CB}
+  .c-ext .detail{color:#5DCAA5}
+  .c-tfm{background:#1f0f00;border-color:#BA7517;color:#FAC775}
+  .c-tfm .detail{color:#EF9F27}
+  .c-load{background:#1f0800;border-color:#D85A30;color:#F5C4B3}
+  .c-load .detail{color:#F0997B}
+  .c-dw{background:#00081f;border-color:#378ADD;color:#B5D4F4}
+  .c-dw .detail{color:#85B7EB}
+  .c-viz{background:#1f0000;border-color:#E24B4A;color:#F7C1C1}
+  .c-viz .detail{color:#F09595}
+  .c-orch{background:#111;border-color:#888780;color:#D3D1C7}
+  .c-orch .detail{color:#B4B2A9}
+  .connector{display:grid;grid-template-columns:90px 1fr;gap:14px;margin:3px 0}
+  .conn-inner{display:flex;align-items:center;gap:8px;padding:0 4px}
+  .conn-label{font-size:10px;color:#555;white-space:nowrap}
+  .conn-svg{width:100%;height:14px;overflow:visible}
+  .flow-line{animation:flow 1.2s linear infinite;stroke-dasharray:4 3}
+  .parallel-block{display:grid;grid-template-columns:90px 1fr;gap:14px;margin:5px 0 8px}
+  .par-inner{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:8px;border:1px dashed #1D9E75;background:rgba(29,158,117,.06)}
+  .par-row{display:flex;align-items:center;gap:8px}
+  .par-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .par-dot-g{background:#1D9E75}
+  .par-dot-p{background:#7F77DD}
+  .par-bar{height:2px;flex:1;border-radius:1px;position:relative;overflow:hidden;background:#222}
+  .par-fill{position:absolute;top:0;left:-100%;width:60%;height:100%;border-radius:1px}
+  .par-fill-g{background:#1D9E75;animation:flow 1.4s linear infinite}
+  .par-fill-p{background:#7F77DD;animation:flow 2s linear infinite}
+  .par-time{font-size:10px;color:#555;white-space:nowrap}
+  .par-badge{font-size:10px;background:rgba(29,158,117,.12);color:#1D9E75;border:1px solid #1D9E75;border-radius:20px;padding:2px 10px;font-weight:500;align-self:flex-start}
+  .divider-row{display:grid;grid-template-columns:90px 1fr;gap:14px;margin:14px 0 12px}
+  .div-line{height:1px;background:#222;margin-top:8px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px solid #222}
+  .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#555}
+  .leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .footer{text-align:center;margin-top:28px;font-size:11px;color:#444}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="skull">☠</div>
+  <div class="title-row">
+    <h1>Horror universe pipeline</h1>
+    <p>Arquitectura end-to-end · TMDB + Open Library → PostgreSQL → Streamlit</p>
+  </div>
+
+  <div class="pipeline">
+
+    <div class="phase-row">
+      <div class="phase-tag">Fuentes</div>
+      <div class="cards">
+        <div class="card c-api">
+          <div class="name">TMDB API</div>
+          <div class="detail">Películas terror · ratings · géneros</div>
+        </div>
+        <div class="card c-api">
+          <div class="name">Open Library API</div>
+          <div class="detail">Libros terror · autores · ratings</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="parallel-block">
+      <div class="phase-tag"></div>
+      <div class="par-inner">
+        <div class="par-row">
+          <div class="par-dot par-dot-g"></div>
+          <div class="par-bar"><div class="par-fill par-fill-g"></div></div>
+          <div class="par-time">TMDB ~7s</div>
+        </div>
+        <div class="par-row">
+          <div class="par-dot par-dot-p"></div>
+          <div class="par-bar"><div class="par-fill par-fill-p"></div></div>
+          <div class="par-time">Open Library ~17s</div>
+        </div>
+        <div class="par-badge">asyncio.gather() · extracción paralela</div>
+      </div>
+    </div>
+
+    <div class="phase-row">
+      <div class="phase-tag">Extract</div>
+      <div class="cards">
+        <div class="card c-ext">
+          <div class="name">tmdb.py</div>
+          <div class="detail">200 películas · 10 páginas · JSON raw</div>
+        </div>
+        <div class="card c-ext">
+          <div class="name">open_library.py</div>
+          <div class="detail">500 libros · 5 páginas · JSON raw</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div></div>
+      <div class="conn-inner">
+        <svg class="conn-svg"><line x1="4" y1="7" x2="99%" y2="7" stroke="#1D9E75" stroke-width="1" class="flow-line"/></svg>
+        <span class="conn-label">data/raw/ · landing zone</span>
+      </div>
+    </div>
+
+    <div class="phase-row">
+      <div class="phase-tag">Transform</div>
+      <div class="cards">
+        <div class="card c-tfm">
+          <div class="name">tmdb_transform.py</div>
+          <div class="detail">Limpieza · tipado · split géneros</div>
+        </div>
+        <div class="card c-tfm">
+          <div class="name">open_library_transform.py</div>
+          <div class="detail">Limpieza · autor string · nulos</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div></div>
+      <div class="conn-inner">
+        <svg class="conn-svg"><line x1="4" y1="7" x2="99%" y2="7" stroke="#BA7517" stroke-width="1" class="flow-line"/></svg>
+        <span class="conn-label">data/processed/ · CSV limpios</span>
+      </div>
+    </div>
+
+    <div class="phase-row">
+      <div class="phase-tag">Load</div>
+      <div class="cards">
+        <div class="card c-load">
+          <div class="name">tmdb_load.py</div>
+          <div class="detail">dim_movies · dim_genres · movie_genres</div>
+        </div>
+        <div class="card c-load">
+          <div class="name">open_library_load.py</div>
+          <div class="detail">dim_books · ON CONFLICT DO NOTHING</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div></div>
+      <div class="conn-inner">
+        <svg class="conn-svg"><line x1="4" y1="7" x2="99%" y2="7" stroke="#D85A30" stroke-width="1" class="flow-line"/></svg>
+        <span class="conn-label">INSERT idempotente · psycopg3</span>
+      </div>
+    </div>
+
+    <div class="phase-row">
+      <div class="phase-tag">Warehouse</div>
+      <div class="cards">
+        <div class="card c-dw">
+          <div class="name">dim_movies</div>
+          <div class="detail">200 filas · vote_avg · popularity</div>
+        </div>
+        <div class="card c-dw">
+          <div class="name">dim_books</div>
+          <div class="detail">500 filas · ratings · pages</div>
+        </div>
+        <div class="card c-dw">
+          <div class="name">genres + movie_genres</div>
+          <div class="detail">19 géneros · 473 relaciones N:M</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div></div>
+      <div class="conn-inner">
+        <svg class="conn-svg"><line x1="4" y1="7" x2="99%" y2="7" stroke="#378ADD" stroke-width="1" class="flow-line"/></svg>
+        <span class="conn-label">PostgreSQL 16 · horror_universe</span>
+      </div>
+    </div>
+
+    <div class="phase-row">
+      <div class="phase-tag">Visualize</div>
+      <div class="cards">
+        <div class="card c-viz">
+          <div class="name">Streamlit + Plotly</div>
+          <div class="detail">Dashboard interactivo · métricas · charts</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider-row">
+      <div></div>
+      <div class="div-line"></div>
+    </div>
+
+    <div class="phase-row">
+      <div class="phase-tag">Orquesta</div>
+      <div class="cards">
+        <div class="card c-orch">
+          <div class="name">horror_pipeline.py</div>
+          <div class="detail">asyncio · dependencias · logs · 17s total</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#7F77DD"></div> APIs fuente</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#1D9E75"></div> Extracción paralela</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#BA7517"></div> Transformación</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#D85A30"></div> Carga</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#378ADD"></div> Warehouse</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#E24B4A"></div> Visualización</div>
+  </div>
+
+  <div class="footer">github.com/SantiImober/horror-universe-pipeline</div>
+
+</div>
+</body>
+</html>
